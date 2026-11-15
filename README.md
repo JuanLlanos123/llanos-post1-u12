@@ -43,3 +43,25 @@ Los tres patrones se seleccionaron porque cada requisito presenta una variabilid
 Esta propuesta busca mantener el sistema extensible y reducir el acoplamiento, evitando que la incorporación de nuevas validaciones, categorías o destinatarios obligue a modificar las implementaciones existentes.
 
 La implementación se realizará después de establecer y documentar estas decisiones de diseño.
+
+
+
+### Decisión de diseño 1: Orden de los validadores en Chain of Responsibility
+
+Se decidió establecer el siguiente orden en la cadena de validación: primero `ValidadorDocumentosSoporte`, después `ValidadorMontoMaximo` y finalmente `ValidadorDuplicados`.
+
+Esta decisión se fundamenta en un criterio de eficiencia: ejecutar primero las verificaciones sencillas y dejar al final la operación que requiere comparar la solicitud con los registros existentes. La validación documental permite comprobar inicialmente la presencia de los soportes requeridos, mientras que la validación del monto verifica que el valor solicitado no supere el límite establecido para su categoría.
+
+La validación de duplicados se ubica al final porque representa la operación más costosa, debido a que necesita buscar coincidencias considerando el empleado, la categoría y el período de la solicitud. De esta manera, si una solicitud no contiene los documentos necesarios o incumple el límite de su categoría, la cadena puede detenerse antes de realizar esa búsqueda.
+
+Ubicar primero el validador de duplicados permitiría identificar anticipadamente las solicitudes repetidas, pero tendría como desventaja que todas las solicitudes tendrían que asumir inicialmente el costo de consultar los registros existentes, incluso aquellas que posteriormente serían rechazadas por verificaciones más sencillas.
+
+Por tanto, se prioriza el orden documentos, monto y duplicados, considerando que las dos primeras verificaciones son independientes y menos costosas que la búsqueda de solicitudes existentes.
+
+**Orden implementado:**
+
+1. `ValidadorDocumentosSoporte`.
+2. `ValidadorMontoMaximo`.
+3. `ValidadorDuplicados`.
+
+La cadena utiliza una estrategia de interrupción: cuando una validación falla, se detiene el procesamiento y devuelve el resultado correspondiente.
