@@ -2,7 +2,7 @@ name: Validacion Arquitectonica
 
 on:
   push:
-    branches: [main, test/archunit-failure-exercise]
+    branches: [main]
   pull_request:
     branches: [main]
 
