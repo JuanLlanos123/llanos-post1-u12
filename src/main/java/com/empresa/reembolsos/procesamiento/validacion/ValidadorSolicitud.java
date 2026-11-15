@@ -1,4 +1,9 @@
 package com.empresa.reembolsos.procesamiento.validacion;
+
+import java.util.List;
+
+import com.empresa.reembolsos.dominio.SolicitudReembolso;
+
 public abstract class ValidadorSolicitud {
     private ValidadorSolicitud siguiente;
 
