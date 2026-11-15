@@ -5,9 +5,12 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 
 import com.empresa.reembolsos.dominio.SolicitudReembolso;
+import com.empresa.reembolsos.infraestructura.RepositorioSolicitudesJpa;
 
 @Component
 public class ValidadorDuplicados extends ValidadorSolicitud {
+    private RepositorioSolicitudesJpa repositorio;
+
     @Override
     protected ResultadoValidacion validarPropio(SolicitudReembolso solicitud, List<SolicitudReembolso> pendientes) {
         boolean existeDuplicado = pendientes.stream()
