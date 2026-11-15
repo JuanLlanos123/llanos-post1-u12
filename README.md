@@ -85,3 +85,65 @@ Por tanto, se elige la construcción del mapa mediante inyección de dependencia
 
 **Consideración:** si `CategoriaGasto` está implementado como un enum, será necesario agregar la nueva constante al enum. Esto no obliga a modificar el selector ni las calculadoras existentes; si se requiere no modificar absolutamente ningún archivo existente, también habría que utilizar un mecanismo extensible de identificación de categorías.
 
+
+### Decisión de diseño 4: Diferenciación entre dependencias de Spring en el paquete procesamiento
+
+Se decidió permitir las anotaciones de estereotipo de Spring, como `@Component` y `@Service`, dentro del paquete `procesamiento`, manteniendo la prohibición de importar clases de `org.springframework.data`, `jakarta.persistence` y componentes de la capa web.
+
+Esta decisión se fundamenta en que no todas las dependencias del framework representan el mismo tipo de acoplamiento. Las anotaciones de estereotipo permiten que Spring identifique y registre componentes como validadores, calculadoras y notificadores, facilitando su administración e inyección de dependencias sin introducir directamente operaciones de persistencia ni responsabilidades propias de la presentación.
+
+Por el contrario, las clases de Spring Data y JPA incorporan mecanismos específicos de acceso, almacenamiento y mapeo de datos, mientras que las clases de Spring Web introducen responsabilidades relacionadas con HTTP, controladores y recepción de solicitudes. Permitir estas dependencias dentro de `procesamiento` provocaría que las reglas de validación, cálculo y notificación quedaran condicionadas por detalles de infraestructura o de presentación.
+
+Por esta razón, la Regla 1 distingue entre las anotaciones utilizadas para el registro de componentes y las dependencias que introducen responsabilidades de infraestructura. No se prohíbe indiscriminadamente todo el paquete `org.springframework`, sino aquellas dependencias que comprometen la separación de responsabilidades y el aislamiento del procesamiento.
+
+Esta decisión permite aprovechar el contenedor de Spring para administrar los componentes sin convertir el paquete `procesamiento` en una capa de persistencia o presentación. Además, mantiene una restricción concreta y verificable: los validadores, calculadoras y notificadores pueden utilizar anotaciones como `@Component`, pero no deben importar repositorios de Spring Data, anotaciones de persistencia JPA ni componentes de Spring Web.
+
+**Criterio de aplicación:**
+
+- **Permitido:** `org.springframework.stereotype.Component`, `org.springframework.stereotype.Service` y otras anotaciones de estereotipo necesarias.
+- **No permitido:** `org.springframework.data.*`, `jakarta.persistence.*` y `org.springframework.web.*`.
+
+La decisión busca equilibrar la integración con Spring y la separación de responsabilidades, evitando restricciones innecesarias que impedirían registrar los componentes mediante el contenedor de dependencias.
+
+
+## Alternativas de diseño consideradas y descartadas
+
+Durante el desarrollo de las dos partes del proyecto se evaluaron alternativas arquitectónicas y de implementación que ofrecían mayor flexibilidad, pero que no se consideraron necesarias para los requisitos actuales. Siguiendo el criterio de la Guía de Contenido, sección 4.2, se priorizaron soluciones justificadas por necesidades existentes y no por posibilidades futuras sin evidencia concreta.
+
+### 1. Spring ApplicationEventPublisher en lugar de una lista de observadores inyectada
+
+**Alternativa considerada:** utilizar `ApplicationEventPublisher` para publicar eventos de dominio y registrar los receptores mediante `@EventListener`, en lugar de inyectar directamente una `List<ObservadorCambioEstado>` en el servicio.
+
+**Decisión:** se descartó esta alternativa y se conservó la lista de observadores inyectada.
+
+**Justificación:** el sistema cuenta actualmente con tres observadores conocidos y definidos en tiempo de compilación. La interfaz `ObservadorCambioEstado` ya proporciona el desacoplamiento necesario entre el servicio y sus destinatarios. Introducir un bus genérico de eventos agregaría una capa de indirección sin resolver una necesidad adicional comprobada y dificultaría rastrear qué componentes reaccionan ante cada cambio de estado.
+
+**Señal futura para reconsiderar:** si diferentes módulos independientes necesitaran publicar y consumir eventos sin conocerse entre sí, o si se requiriera procesamiento asíncrono y distribución de eventos entre procesos, tendría sentido evaluar `ApplicationEventPublisher` u otra infraestructura de eventos.
+
+### 2. Visitor o Abstract Factory para exportar reportes en varios formatos
+
+**Alternativa considerada:** implementar una jerarquía de exportadores utilizando Visitor o Abstract Factory para permitir la generación de reportes en diferentes formatos, como PDF, Excel y CSV.
+
+**Decisión:** se descartó esta alternativa y se evitó construir anticipadamente una jerarquía de exportación.
+
+**Justificación:** actualmente existe un requisito concreto de exportación en formato CSV, pero no hay solicitudes confirmadas de Contabilidad para incorporar otros formatos. Aplicar estos patrones desde el inicio significaría introducir abstracciones para resolver una variabilidad que todavía no existe, incumpliendo el criterio Rule of Three de la Guía de Contenido.
+
+**Señal futura para reconsiderar:** recibir una segunda solicitud real de exportación, por ejemplo, la necesidad de generar reportes tanto en PDF como en Excel, justificaría evaluar una estructura común de exportadores.
+
+### 3. Jerarquía de excepciones por validador en lugar de ResultadoValidacion
+
+**Alternativa considerada:** crear una jerarquía de excepciones específicas para cada regla de validación, por ejemplo, `MontoExcedidoException`, `DocumentosFaltantesException` y `SolicitudDuplicadaException`, para comunicar los errores detectados por cada validador de la cadena.
+
+**Decisión:** se descartó esta alternativa y se mantuvo el uso de `ResultadoValidacion` como mecanismo común para comunicar el resultado de las verificaciones.
+
+**Justificación:** en el sistema actual, los incumplimientos de las reglas de validación son resultados esperados del proceso de presentación de una solicitud y no situaciones excepcionales que justifiquen crear y administrar diferentes tipos de excepciones. El objeto `ResultadoValidacion` permite comunicar si la solicitud cumple las condiciones y proporcionar el motivo cuando una verificación falla, manteniendo un contrato común entre los validadores y `CadenaValidadores`.
+
+Crear una excepción por cada validador aumentaría la cantidad de clases y obligaría a incorporar mecanismos adicionales para capturar, clasificar y transformar cada excepción en una respuesta comprensible. Esta complejidad no aporta un beneficio proporcional mientras todas las verificaciones compartan el mismo flujo de tratamiento.
+
+**Señal futura para reconsiderar:** si los errores de validación necesitaran tratamientos completamente diferentes fuera de la cadena, como activar procesos de recuperación específicos, generar respuestas HTTP diferenciadas o ejecutar flujos particulares de atención según el tipo de incumplimiento, podría justificarse introducir excepciones especializadas o una clasificación de errores más detallada.
+
+### Conclusión del análisis de alternativas
+
+Las tres alternativas fueron descartadas porque su complejidad adicional no está respaldada por una necesidad actual del sistema. La decisión no implica que estos patrones o mecanismos sean inadecuados, sino que su incorporación debe responder a una variabilidad real y documentada.
+
+El criterio aplicado consiste en mantener las soluciones actuales mientras satisfagan los requisitos existentes y reconsiderar las alternativas cuando aparezcan necesidades concretas que justifiquen su adopción. De esta manera se evita la sobreingeniería y se conserva la posibilidad de evolucionar la arquitectura cuando el proyecto realmente lo requiera.
