@@ -28,4 +28,4 @@ jobs:
         run: mvn test -Dtest=ReglasArquitectura --no-transfer-progress
 
       - name: Ejecutar suite completa de pruebas
-        run: mvn verify --no-transfer-progresss
+        run: mvn verify --no-transfer-progress
