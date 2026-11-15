@@ -147,3 +147,40 @@ Crear una excepción por cada validador aumentaría la cantidad de clases y obli
 Las tres alternativas fueron descartadas porque su complejidad adicional no está respaldada por una necesidad actual del sistema. La decisión no implica que estos patrones o mecanismos sean inadecuados, sino que su incorporación debe responder a una variabilidad real y documentada.
 
 El criterio aplicado consiste en mantener las soluciones actuales mientras satisfagan los requisitos existentes y reconsiderar las alternativas cuando aparezcan necesidades concretas que justifiquen su adopción. De esta manera se evita la sobreingeniería y se conserva la posibilidad de evolucionar la arquitectura cuando el proyecto realmente lo requiera.
+
+## Verificación de las reglas de arquitectura
+
+Las reglas de ArchUnit están en `ReglasArquitectura` y se pueden ejecutar localmente con:
+
+```powershell
+.\mvnw.cmd -Dtest=ReglasArquitectura test
+```
+
+La regla `procesamientoSinPersistenciaNiWeb` comprueba, entre otras restricciones, que las clases de `procesamiento` no dependan de `infraestructura`. Un `import` sin uso no basta para provocar la infracción: Java no conserva imports en el bytecode. Para probar la regla, agrega temporalmente a `ValidadorDuplicados` el import de `RepositorioSolicitudesJpa` y un campo que lo use como tipo:
+
+```java
+private RepositorioSolicitudesJpa repositorio;
+```
+
+Al repetir el comando, la regla debe fallar señalando la dependencia de `procesamiento` hacia `infraestructura`. Después elimina el campo y el import, y confirma que la prueba vuelve a pasar.
+
+### Comprobar la regla en GitHub Actions
+
+No introduzcas esta violación directamente en `main`: la prueba consiste en hacer fallar CI intencionalmente. Usa una rama temporal y abre un pull request hacia `main`:
+
+```powershell
+git switch -c prueba/violacion-arquitectura
+# Agrega temporalmente el campo y el import descritos arriba.
+git add src/main/java/com/empresa/reembolsos/procesamiento/validacion/ValidadorDuplicados.java
+git commit -m "test: introducir violacion temporal de arquitectura"
+git push -u origin prueba/violacion-arquitectura
+```
+
+El workflow `.github/workflows/arquitectura.yml` se ejecuta en pull requests dirigidos a `main`. El job `arquitectura` debe fallar en el paso de reglas de arquitectura. Para revertir el commit de prueba en esa rama y volver a disparar el workflow:
+
+```powershell
+git revert HEAD
+git push
+```
+
+La nueva ejecución debe pasar una vez retirada la dependencia temporal.
