@@ -26,7 +26,7 @@ public class SolicitudReembolsoController {
     }
 
     @PutMapping("/{id}/estado")
-    public ResponseEntity<SolicitudReembolso> cambiarEstado(@PathVariable Long id, @RequestBody EstadoSolicitud nuevoEstado) {
+    public ResponseEntity<SolicitudReembolso> cambiarEstado(@PathVariable Long id, @RequestBody EstadoSolicitud nuevoEstado) throws Throwable {
         return ResponseEntity.ok(servicio.cambiarEstado(id, nuevoEstado));
     }
 }

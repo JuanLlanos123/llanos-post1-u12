@@ -1,11 +1,9 @@
 package com.empresa.reembolsos.infraestructura;
 
+import com.empresa.reembolsos.dominio.EstadoSolicitud;
+import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.empresa.reembolsos.dominio.EstadoSolicitud;
-import com.empresa.reembolsos.dominio.SolicitudReembolso;
-
-// Controlador REST — solo habla con el servicio de aplicacion
-public interface RepositorioSolicitudesJpa extends JpaRepository<SolicitudReembolso,Long>{
-    SolicitudReembolso findByEmpleadoIdAndEstado(String id, EstadoSolicitud solicitud); 
+public interface RepositorioSolicitudesJpa extends JpaRepository<SolicitudReembolsoJpa, Long> {
+       List<SolicitudReembolsoJpa> findByEmpleadoIdAndEstado(String empleadoId, EstadoSolicitud estado);
 }
