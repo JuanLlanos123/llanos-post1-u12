@@ -65,3 +65,23 @@ Por tanto, se prioriza el orden documentos, monto y duplicados, considerando que
 3. `ValidadorDuplicados`.
 
 La cadena utiliza una estrategia de interrupción: cuando una validación falla, se detiene el procesamiento y devuelve el resultado correspondiente.
+
+
+### Decisión de diseño 2: Selección de calculadoras mediante un mapa construido por Spring
+
+Se decidió utilizar un `Map<CategoriaGasto, CalculadoraReembolso>` construido a partir de una `List<CalculadoraReembolso>` inyectada automáticamente por Spring, en lugar de implementar un método con un `switch` manual sobre `CategoriaGasto`.
+
+Esta elección se fundamenta directamente en el RF2, que establece que Finanzas planea incorporar nuevas categorías de gasto en los próximos semestres, cada una con su propia fórmula de cálculo, sin modificar los cálculos de las categorías existentes.
+
+Mediante la inyección de dependencias, Spring proporciona automáticamente todas las implementaciones de `CalculadoraReembolso` registradas como componentes. A partir de esa lista se construye un mapa que relaciona cada categoría con su calculadora correspondiente. De esta manera, el mecanismo de selección no necesita conocer anticipadamente todas las categorías disponibles ni incorporar nuevas condiciones cada vez que aparece una categoría.
+
+Para agregar una categoría como bienestar, basta con desarrollar una nueva implementación de `CalculadoraReembolso` y registrarla como componente de Spring. El mapa incorpora automáticamente esa implementación, evitando modificar el selector y las calculadoras que ya existen.
+
+La alternativa de utilizar un `switch` manual no cumple este objetivo de extensibilidad, porque cada nueva categoría obligaría a modificar el método de selección e incorporar otro caso, aumentando el acoplamiento y dificultando el mantenimiento.
+
+Por tanto, se elige la construcción del mapa mediante inyección de dependencias porque permite extender el comportamiento del sistema agregando nuevas implementaciones, sin modificar el código existente de selección, aplicando así el principio Open/Closed: las clases deben estar abiertas a la extensión, pero cerradas a la modificación.
+
+**Mecanismo seleccionado:** `List<CalculadoraReembolso>` inyectada por Spring y transformación a `Map<CategoriaGasto, CalculadoraReembolso>`.
+
+**Consideración:** si `CategoriaGasto` está implementado como un enum, será necesario agregar la nueva constante al enum. Esto no obliga a modificar el selector ni las calculadoras existentes; si se requiere no modificar absolutamente ningún archivo existente, también habría que utilizar un mecanismo extensible de identificación de categorías.
+
