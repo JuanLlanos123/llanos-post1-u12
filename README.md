@@ -127,6 +127,8 @@ Negativas:
   dependencias externas) puede interpretar la asimetria como
   inconsistencia si no lee este ADR.
 
+  
+
 ### Decisión de diseño 4: Diferenciación entre dependencias de Spring en el paquete procesamiento
 
 Se decidió permitir las anotaciones de estereotipo de Spring, como `@Component` y `@Service`, dentro del paquete `procesamiento`, manteniendo la prohibición de importar clases de `org.springframework.data`, `jakarta.persistence` y componentes de la capa web.
